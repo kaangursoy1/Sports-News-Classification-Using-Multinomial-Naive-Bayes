@@ -1,0 +1,41 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Oct 30 17:21:07 2022
+
+@author: Kaan GURSOY
+"""
+
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+import math
+
+
+
+train = pd.read_csv("bbcsports_train.csv")
+valdata = pd.read_csv("bbcsports_val.csv")
+
+V = len(train.columns) - 1
+alfa = 1
+rowquantity = len(train.sum(axis=0))
+freqq = train.sum(axis=0)
+classs = 5
+Ti = [(train.query("class_label == @i")).loc[:, train.columns != "class_label"].sum() for i in range(5)]
+
+MLE = lambda word, yk: math.log((Ti[yk][word]) / (sum(Ti[yk]))) if Ti[yk][word] != 0 else -100000
+
+MLE_array = np.asarray([[MLE(word, yk) for word in train.loc[:, train.columns != "class_label"].columns] for yk in range(5)])
+
+actual_value = list(valdata["class_label"])
+L = []
+for row in tqdm(valdata.iterrows()):
+    row = row[1].loc[train.columns != "class_label"]
+    max_like = np.sum(np.nan_to_num(MLE_array * np.asarray(row), 0), axis=1)
+
+    L.append(np.argmax(max_like))
+    
+conf_matrix = (pd.crosstab(actual_value, L,dropna=False)).to_numpy()
+
+accuracy_of_MLE = np.trace(conf_matrix) / np.sum(conf_matrix) 
+print(pd.crosstab(actual_value, L,dropna=False))
+print("Accuracy", accuracy_of_MLE)
